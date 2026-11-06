@@ -51,7 +51,7 @@ npm run dev                 # http://localhost:3000
 ```
 
 ## Deployment URL
-`[ISI setelah deploy]`
+`https://bali-alert-ai-web.vercel.app`
 
 ## Demo Account
 Tidak perlu login.
@@ -68,4 +68,4 @@ Tidak perlu login.
 Next.js, React, FastAPI, httpx, Pydantic, Gemini API. Rujukan sumber peringatan: BMKG, BPBD, Pemprov Bali.
 
 ## Team Members
-`[ISI nama]` — pembuat tunggal (kategori SMA/SMK).
+`Abiyya Hamdan Nurwandha` — pembuat tunggal (kategori SMA/SMK).
