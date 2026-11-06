@@ -1,6 +1,5 @@
 """BaliAlert AI - backend (FastAPI)."""
 import os
-
 from pathlib import Path
 
 
@@ -17,32 +16,34 @@ def _load_env():
 
 _load_env()
 
-# pyrefly: ignore[missing-import]
-from fastapi import FastAPI, HTTPException
-# pyrefly: ignore[missing-import]
-from fastapi.middleware.cors import CORSMiddleware
-# pyrefly: ignore[missing-import]
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 
-import ai
-import baseline
-from samples import SAMPLES
-from guardrails import validate
+import ai  # noqa: E402
+import baseline  # noqa: E402
+import live  # noqa: E402
+from guardrails import validate  # noqa: E402
+from samples import SAMPLES  # noqa: E402
 
 DISCLAIMER = (
     "BaliAlert AI bukan sumber peringatan resmi. Penjelasan ini dibuat oleh AI dan bisa keliru. "
     "Selalu ikuti teks asli dan arahan BMKG, BPBD, serta petugas di lokasi."
 )
 
-app = FastAPI(title="BaliAlert AI API", version="1.0")
+app = FastAPI(title="BaliAlert AI API", version="1.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
 
 
 class ExplainRequest(BaseModel):
     text: str = Field(min_length=20, max_length=5000)
     language: str = Field(default="id", pattern="^(" + "|".join(ai.LANGUAGES) + ")$")
     source_url: str | None = Field(default=None, max_length=300)
+
+
+@app.get("/")
+def root():
+    return {"name": "BaliAlert AI API", "version": "1.1", "health": "/api/health", "docs": "/docs"}
 
 
 @app.get("/api/health")
@@ -60,6 +61,18 @@ def samples():
     return SAMPLES
 
 
+@app.get("/api/live/gempa")
+def live_gempa():
+    try:
+        return {"ok": True, **live.fetch_live()}
+    except Exception:  # sumber luar bisa gagal; pengguna tetap bisa tempel teks manual
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "live_unavailable",
+                    "message": "Data BMKG tidak dapat diambil saat ini. Tempel teks peringatan secara manual."},
+        )
+
+
 @app.post("/api/explain")
 def explain(req: ExplainRequest):
     base = baseline.extract(req.text)
@@ -71,6 +84,7 @@ def explain(req: ExplainRequest):
             status_code=503,
             detail={"code": e.code, "message": str(e), "baseline": base, "disclaimer": DISCLAIMER},
         )
+    model = raw.pop("_model", None)
     if not raw.get("is_official_warning", False):
         return {
             "ok": True,
@@ -87,5 +101,6 @@ def explain(req: ExplainRequest):
         "checks": checks,
         "baseline": base,
         "source_url": req.source_url,
+        "model": model,
         "disclaimer": DISCLAIMER,
     }

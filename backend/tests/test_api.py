@@ -111,3 +111,63 @@ def test_ai_without_key_raises(monkeypatch):
     with pytest.raises(ai.AIError) as e:
         ai.call_model(SRC, "id")
     assert e.value.code == "no_key"
+
+
+def test_models_fallback_order(monkeypatch):
+    monkeypatch.setenv("GEMINI_MODEL", "m-utama")
+    monkeypatch.setenv("GEMINI_FALLBACK_MODELS", "m-b, m-utama, m-c")
+    assert ai.models() == ["m-utama", "m-b", "m-c"]
+
+
+def test_fallback_to_second_model_and_cache(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("GEMINI_MODEL", "m1")
+    monkeypatch.setenv("GEMINI_FALLBACK_MODELS", "m2")
+    ai._CACHE.clear()
+    calls = []
+
+    def fake_one(model, key, source, language):
+        calls.append(model)
+        if model == "m1":
+            raise ai.AIError("quota", "habis")
+        return {"is_official_warning": True}
+
+    monkeypatch.setattr(ai, "_call_one", fake_one)
+    r = ai.call_model(SRC, "id")
+    assert r["_model"] == "m2" and calls == ["m1", "m2"]
+    ai.call_model(SRC, "id")  # kedua kali: dari cache, tanpa panggilan baru
+    assert calls == ["m1", "m2"]
+
+
+def test_all_models_fail_raises(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    ai._CACHE.clear()
+    monkeypatch.setattr(ai, "_call_one", lambda *a: (_ for _ in ()).throw(ai.AIError("quota", "habis")))
+    with pytest.raises(ai.AIError):
+        ai.call_model(SRC, "id")
+
+
+def test_parse_json_handles_code_fence():
+    assert ai._parse_json('```json\n{"a": 1}\n```') == {"a": 1}
+
+
+def test_live_build_items_prefers_bali():
+    import live
+    payload = {"Infogempa": {"gempa": [
+        {"Tanggal": "05 Nov 2026", "Jam": "10:00:00 WIB", "Magnitude": "3.1", "Kedalaman": "10 km",
+         "Wilayah": "Pusat gempa di darat 5 km Timur Laut Karangasem-Bali", "Dirasakan": "II Karangasem"},
+        {"Tanggal": "05 Nov 2026", "Jam": "09:00:00 WIB", "Magnitude": "4.0", "Kedalaman": "20 km",
+         "Wilayah": "Laut Banda", "Dirasakan": "III Ambon"},
+    ]}}
+    out = live.build_items(payload)
+    assert out["is_bali"] is True and len(out["items"]) == 1
+    assert "Karangasem" in out["items"][0]["text"]
+    b = baseline.extract(out["items"][0]["text"])
+    assert b["hazard_type"] == "Gempa bumi" and b["validity"] == "05 Nov 2026"
+
+
+def test_live_build_items_falls_back_when_no_bali():
+    import live
+    payload = {"Infogempa": {"gempa": [{"Wilayah": "Laut Banda", "Magnitude": "4"}] * 5}}
+    out = live.build_items(payload)
+    assert out["is_bali"] is False and len(out["items"]) == 3

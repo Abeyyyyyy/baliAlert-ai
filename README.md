@@ -12,10 +12,13 @@ Penjelas peringatan resmi (BMKG/BPBD) untuk wisatawan di Bali. Pengguna menempel
 - Ekstraksi AI: jenis bahaya, level, wilayah, masa berlaku, instruksi resmi, ke dalam 8 bahasa.
 - Teks asli berdampingan dengan penjelasan, plus tautan sumber.
 - Pengaman: kutipan AI diverifikasi harus ada persis di teks sumber; yang tidak ditemukan dibuang/ditandai. Bidang yang tidak ada ditulis "Tidak tersedia", tidak ditebak.
-- Pembanding non-AI (aturan/regex) dan cadangan saat AI gagal atau kuota habis.
+- Pembanding non-AI (aturan/regex) yang ditampilkan berdampingan dengan hasil AI (selaras/beda), dan cadangan saat AI gagal atau kuota habis.
+- Badge level berwarna, ringkasan verifikasi, tombol salin, dan pilihan bahasa yang diingat.
+- (Beta) Ambil data gempa dirasakan terbaru dari open data BMKG (data.bmkg.go.id); teks disusun otomatis dari kolom data resmi.
+- Model cadangan otomatis dan cache sementara untuk menghemat kuota API.
 
 ## Tech Stack
-Frontend: Next.js 14 + TypeScript. Backend: Python + FastAPI. AI: Gemini API. Hosting: Vercel. Tanpa database.
+Frontend: Next.js 14 + TypeScript. Backend: Python + FastAPI. AI: Gemini API (`GEMINI_MODEL`, cadangan `GEMINI_FALLBACK_MODELS`). Hosting: Vercel. Tanpa database.
 
 ## AI Implementation
 Lihat `docs/AI_TECHNOLOGY_DISCLOSURE.md`. Kode pemanggilan AI: `backend/ai.py`. Pengaman: `backend/guardrails.py`. Baseline non-AI: `backend/baseline.py`.
@@ -54,7 +57,8 @@ npm run dev                 # http://localhost:3000
 Tidak perlu login.
 
 ## Known Limitations
-- Input lewat tempel teks; belum mengambil data otomatis dari BMKG karena API/feed resmi belum terverifikasi.
+- Input utama lewat tempel teks. Pengambilan otomatis baru tersedia untuk gempa dirasakan (beta); peringatan gelombang tinggi dan rob belum punya feed yang terverifikasi.
+- AI bisa melewatkan informasi (mis. satu wilayah); pemeriksa otomatis menangkap karangan, bukan yang terlewat, sehingga pembanding non-AI ditampilkan.
 - Kuota gratis Gemini terbatas; saat habis, aplikasi menampilkan ekstraksi non-AI.
 - Terjemahan belum divalidasi penutur asli; kutipan resmi tetap dalam teks asli.
 - Fokus awal: gelombang tinggi dan banjir pesisir (rob) Bali.

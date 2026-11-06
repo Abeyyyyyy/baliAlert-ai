@@ -1,3 +1,4 @@
+"""Contoh teks untuk demo. BUKAN peringatan resmi (lihat label tombol)."""
 
 SAMPLES = [
     {
