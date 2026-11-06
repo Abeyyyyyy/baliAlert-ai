@@ -35,8 +35,7 @@ DISCLAIMER = (
 )
 
 app = FastAPI(title="BaliAlert AI API", version="1.0")
-origins = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "*").split(",")]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 
